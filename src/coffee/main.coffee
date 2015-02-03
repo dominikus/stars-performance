@@ -334,6 +334,94 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		render()
 		scheduleAnimation()
 
+	animatePixi = () ->
+		renderer = PIXI.autoDetectRenderer(500, 500, {resolution: 2})
+		document.getElementsByClassName('container')[0].appendChild(renderer.view)
+
+		stage = new PIXI.Stage(0xFFFFFF)
+		graphics = new PIXI.Graphics
+
+		stage.addChild(graphics)
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': x_scale(+d.x)
+				'y': y_scale(+d.y)
+				'data': d
+			)
+		ease = d3.ease("cubic-in-out")
+
+		startTime = new Date().getTime()
+		loopTime = new Date
+		forward = true
+		lastDiff = 0
+		lastT = 0
+
+		$('canvas').css(
+			"width": 500
+			"height": 500
+		)
+
+		# init stage
+		starModels.forEach (d) ->
+			d.g = new PIXI.Graphics
+			d.width = 2
+			d.height = 2
+			d.g.lineStyle(0)
+			d.g.beginFill(0x000000)
+			d.g.drawCircle(1,1,1)
+
+			d.g.x = d.x
+			d.g.y = d.y
+			stage.addChild(d.g)
+
+		render = () ->
+			# calculate time offset
+			currentTime = new Date().getTime()
+			diff = (currentTime - startTime) % animationDuration
+
+			# check if we're done
+			if diff < lastDiff
+				forward = !forward
+
+			if forward
+				t = ease(diff/animationDuration)
+			else
+				t = 1 - ease(diff/animationDuration)
+
+			graphics.clear()
+			graphics.lineStyle(0)
+
+			starModels.forEach (d) ->
+				# animate model
+				d.x = d3.interpolate(x_scale(+d.data.x), y_scale(+d.data.y))(t)
+				d.y = d3.interpolate(y_scale(+d.data.y), z_scale(+d.data.z))(t)
+
+				d.g.x = d.x
+				d.g.y = d.y
+
+				# render
+				# graphics.beginFill(0x000000)
+				# graphics.drawCircle(d.x, d.y, 1)
+				# graphics.endFill()
+
+			renderer.render(stage)
+
+			lastDiff = diff
+
+			fps = 1000 / (currentTime - loopTime)
+			$('#fpsCounter').text(fps.toFixed(1) + " fps")
+			loopTime = currentTime
+
+			requestAnimationFrame(render)
+
+		render()
+
+		#end = new Date().getTime()
+		#timerDisplay.text("rendering canvas... #{end-begin}ms")
+
 
 	# run tests
 	# renderSVG()
@@ -342,4 +430,5 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 	#animateSVG()
 	#animateCanvas()
-	animateVirtualDOM()
+	#animateVirtualDOM()
+	animatePixi()
