@@ -21,7 +21,9 @@
     "jquery": "1.9.1",
     "backbone": "~1.1.2",
     "bootstrap-sass": "~3.3.3",
-    "pixi.js": "~2.2.5"
+    "pixi.js": "~2.2.5",
+    "stats.js": "*",
+    "three.js": "*"
   },
   "overrides": {
     "jquery": {
