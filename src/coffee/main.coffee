@@ -18,7 +18,18 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 	counter = 0
 	stars.forEach (s) -> s.number = counter++
 
-	stars = stars.slice(0, 20000)
+	#stars = stars.slice(0, 50000)
+
+	# remove stars around earth?
+	filteredStars = []
+	stars.forEach (s) ->
+		if Math.abs(+s.x) > 500 or Math.abs(+s.y) > 500 or Math.abs(+s.z) > 500
+			filteredStars.push(s)
+
+	console.log "stars: #{filteredStars.length} (from: #{stars.length})"
+
+	#stars = filteredStars
+
 
 	# init fps counter:
 	stats = new Stats()
@@ -211,7 +222,14 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 				'x': hi_x_scale(+d.x)
 				'y': hi_y_scale(+d.y)
 				'data': d
+				'source':
+					'x': hi_x_scale(+d.x)
+					'y': hi_y_scale(+d.y)
+				'target':
+					'x': hi_y_scale(+d.y)
+					'y': hi_z_scale(+d.z)
 			)
+
 		ease = d3.ease("cubic-in-out")
 
 		startTime = new Date().getTime()
@@ -220,11 +238,10 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		lastT = 0
 
 		render = () ->
+			stats.begin()
 			# calculate time offset
 			currentTime = new Date().getTime()
 			diff = (currentTime - startTime) % animationDuration
-
-			stats.begin()
 
 			# check if we're done
 			if diff < lastDiff
@@ -234,14 +251,16 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 				t = ease(diff/animationDuration)
 			else
 				t = 1 - ease(diff/animationDuration)
+			mt = 1-t
 
+			# clear canvas
 			canvas[0][0].width = 1000
 			canvas[0][0].height = 1000
 
 			starModels.forEach (d) ->
 				# animate model
-				d.x = d3.interpolate(hi_x_scale(+d.data.x), hi_y_scale(+d.data.y))(t)
-				d.y = d3.interpolate(hi_y_scale(+d.data.y), hi_z_scale(+d.data.z))(t)
+				d.x = t*d.source.x + mt*d.target.x
+				d.y = t*d.source.y + mt*d.target.y
 
 				# render
 				ctx.beginPath()
@@ -250,11 +269,174 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 			lastDiff = diff
 
+			requestAnimationFrame(render)
+
 			stats.end()
+
+		render()
+
+	animateCanvasSprite = () ->
+		canvas = d3.select('.container').append("canvas")
+			.attr(
+				"width": "1000"
+				"height": "1000"
+			)
+			.style(
+				"width": "500px"
+				"height": "500px"
+			)
+
+		ctx = canvas[0][0].getContext("2d")
+		ctx.fillStyle = "#000"
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': hi_x_scale(+d.x)
+				'y': hi_y_scale(+d.y)
+				'data': d
+				'source':
+					'x': hi_x_scale(+d.x)
+					'y': hi_y_scale(+d.y)
+				'target':
+					'x': hi_y_scale(+d.y)
+					'y': hi_z_scale(+d.z)
+			)
+
+		ease = d3.ease("cubic-in-out")
+
+		startTime = new Date().getTime()
+		forward = true
+		lastDiff = 0
+		lastT = 0
+
+		# create sprite
+		tex = document.createElement("img")
+
+		render = () ->
+			stats.begin()
+			# calculate time offset
+			currentTime = new Date().getTime()
+			diff = (currentTime - startTime) % animationDuration
+
+			# check if we're done
+			if diff < lastDiff
+				forward = !forward
+
+			if forward
+				t = ease(diff/animationDuration)
+			else
+				t = 1 - ease(diff/animationDuration)
+			mt = 1-t
+
+			# clear canvas
+			canvas[0][0].width = 1000
+			canvas[0][0].height = 1000
+
+			starModels.forEach (d) ->
+				# animate model
+				d.x = t*d.source.x + mt*d.target.x
+				d.y = t*d.source.y + mt*d.target.y
+
+				# render sprite
+				ctx.drawImage(tex, d.x, d.y)
+
+			lastDiff = diff
 
 			requestAnimationFrame(render)
 
+			stats.end()
+
+		tex.onload = () ->
+			render()
+		tex.src = "assets/img/circle_4.png"
+
+
+
+	animateCanvasCanvasSprite = () ->
+		canvas = d3.select('.container').append("canvas")
+			.attr(
+				"width": "1000"
+				"height": "1000"
+			)
+			.style(
+				"width": "500px"
+				"height": "500px"
+			)
+
+		ctx = canvas[0][0].getContext("2d")
+		ctx.fillStyle = "#000"
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': hi_x_scale(+d.x)
+				'y': hi_y_scale(+d.y)
+				'data': d
+				'source':
+					'x': hi_x_scale(+d.x)
+					'y': hi_y_scale(+d.y)
+				'target':
+					'x': hi_y_scale(+d.y)
+					'y': hi_z_scale(+d.z)
+			)
+
+		ease = d3.ease("cubic-in-out")
+
+		startTime = new Date().getTime()
+		forward = true
+		lastDiff = 0
+		lastT = 0
+
+		# create sprite
+		tex = document.createElement("canvas")
+		tex.width = 4
+		tex.height = 4
+
+		render = () ->
+			stats.begin()
+			# calculate time offset
+			currentTime = new Date().getTime()
+			diff = (currentTime - startTime) % animationDuration
+
+			# check if we're done
+			if diff < lastDiff
+				forward = !forward
+
+			if forward
+				t = ease(diff/animationDuration)
+			else
+				t = 1 - ease(diff/animationDuration)
+			mt = 1-t
+
+			# clear canvas
+			canvas[0][0].width = 1000
+			canvas[0][0].height = 1000
+
+			starModels.forEach (d) ->
+				# animate model
+				d.x = t*d.source.x + mt*d.target.x
+				d.y = t*d.source.y + mt*d.target.y
+
+				# render sprite
+				ctx.drawImage(tex, d.x, d.y)
+
+			lastDiff = diff
+
+			requestAnimationFrame(render)
+
+			stats.end()
+
+		texctx = tex.getContext("2d")
+		texctx.fillStyle = '#000'
+		texctx.beginPath()
+		texctx.arc(2,2,2,0,2*Math.PI, false)
+		texctx.fill()
+
 		render()
+
 
 	animateVirtualDOM = () ->
 		virtualContainer = d3.select(document.createElement("custom"))
@@ -379,6 +561,72 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		gl.depthFunc(gl.LEQUAL)                               # Near things obscure far things
 		gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)
 
+	animateTwo = () ->
+		two = new Two(
+			type: Two.Types.webgl
+			width: 500
+			height: 500
+		).appendTo(document.getElementsByClassName('container')[0])
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': x_scale(+d.x)
+				'y': y_scale(+d.y)
+				'data': d
+				'source':
+					'x': x_scale(+d.x)
+					'y': y_scale(+d.y)
+				'target':
+					'x': y_scale(+d.y)
+					'y': z_scale(+d.z)
+			)
+		ease = d3.ease("cubic-in-out")
+
+		startTime = new Date().getTime()
+		loopTime = new Date
+		forward = true
+		lastDiff = 0
+		lastT = 0
+
+		# init objects
+		starModels.forEach (d) ->
+			d.g = two.makeCircle(d.x, d.y, 1)
+			d.g.fill = '#000000'
+			d.g.stroke = 'none'
+
+		render = () ->
+			stats.begin()
+
+			# calculate time offset
+			currentTime = new Date().getTime()
+			diff = (currentTime - startTime) % animationDuration
+
+			# check if we're done
+			if diff < lastDiff
+				forward = !forward
+
+			if forward
+				t = ease(diff/animationDuration)
+			else
+				t = 1 - ease(diff/animationDuration)
+			mt = 1-t
+
+			starModels.forEach (d) ->
+				# animate model
+				d.x = t*d.source.x + mt*d.target.x
+				d.y = t*d.source.y + mt*d.target.y
+
+				d.g.translation.set(d.x, d.y)
+
+			lastDiff = diff
+
+			stats.end()
+
+		two.bind('update', render).play()
+
+		console.log two.type
 
 
 	animateThree = () ->
@@ -448,8 +696,8 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 			starModels.forEach (d) ->
 				# animate model
-				# d.x = t*d.source.x + mt*d.target.x
-				# d.y = t*d.source.y + mt*d.target.y
+				d.x = t*d.source.x + mt*d.target.x
+				d.y = t*d.source.y + mt*d.target.y
 
 				d.g.position.x = d.x
 				d.g.position.y = d.y
@@ -501,7 +749,7 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		lastT = 0
 
 		# create sprites
-		tex = THREE.ImageUtils.loadTexture("assets/img/circle_pot.png")
+		tex = THREE.ImageUtils.loadTexture("assets/img/circle_4.png")
 
 		# create an optimized material from the texture
 		material = new THREE.SpriteMaterial(
@@ -514,8 +762,8 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 		starModels.forEach (d) ->
 			d.g = new THREE.Sprite(material)
-			d.g.position.set d.x, d.y, 0
-			d.g.scale.set 4,4,0
+			d.g.position.set d.x, d.y, 1
+			d.g.scale.set 4,4,4
 
 			scene.add(d.g)
 
@@ -554,9 +802,173 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 		render()
 
+	animateThreeParticles = () ->
+		scene = new THREE.Scene
+		camera = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 1000)
+		camera.position.z = 20
+
+		renderer = new THREE.WebGLRenderer
+		renderer.setClearColor( 0xffffff, 0 )
+		renderer.setSize(1000,1000)
+		renderer.domElement.style.width = "500px"
+		renderer.domElement.style.height = "500px"
+
+		document.getElementsByClassName('container')[0].appendChild(renderer.domElement)
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': bi_x_scale(+d.x)
+				'y': bi_y_scale(+d.y)
+				'z': bi_z_scale(+d.z)
+				'data': d
+				'source':
+					'x': bi_x_scale(+d.x)
+					'y': bi_y_scale(+d.y)
+					'z': bi_z_scale(+d.z)
+				'target':
+					'x': bi_y_scale(+d.y)
+					'y': bi_z_scale(+d.z)
+					'z': bi_x_scale(+d.x)
+			)
+		ease = d3.ease("cubic-in-out")
+
+		startTime = new Date().getTime()
+		loopTime = new Date
+		forward = true
+		lastDiff = 0
+		lastT = 0
+
+		# create particles
+		particle_geometry = new THREE.Geometry
+
+		# create a particle material
+		material = new THREE.PointCloudMaterial(
+			size: 4
+			color: 0x000000
+			map: THREE.ImageUtils.loadTexture('assets/img/circle_4.png')
+			blending: THREE.AdditiveBlending
+			transparent: false
+		)
+
+		starModels.forEach (d) ->
+			particle_geometry.vertices.push(new THREE.Vector3(d.x, d.y, 1))
+
+		pointcloud = new THREE.PointCloud(particle_geometry, material)
+		scene.add(pointcloud)
+
+		render = () ->
+			stats.begin()
+
+			# calculate time offset
+			currentTime = new Date().getTime()
+			diff = (currentTime - startTime) % animationDuration
+
+			# check if we're done
+			if diff < lastDiff
+				forward = !forward
+
+			if forward
+				t = ease(diff/animationDuration)
+			else
+				t = 1 - ease(diff/animationDuration)
+			mt = 1-t
+
+			i = 0
+			starModels.forEach (d) ->
+				# animate model
+				d.x = t*d.source.x + mt*d.target.x
+				d.y = t*d.source.y + mt*d.target.y
+
+				particle_geometry.vertices[i] = new THREE.Vector3(d.x, d.y, 1)
+				i++
+
+			particle_geometry.verticesNeedUpdate = true
+
+			renderer.render(scene, camera)
+
+			lastDiff = diff
+
+			stats.end()
+
+			requestAnimationFrame(render)
+
+		render()
+
+
+	animateFullThreeD = () ->
+		scene = new THREE.Scene
+		camera = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 1000)
+		camera.position.z = 20
+
+		renderer = new THREE.WebGLRenderer
+		renderer.setClearColor( 0xffffff, 0 )
+		renderer.setSize(1000,1000)
+		renderer.domElement.style.width = "500px"
+		renderer.domElement.style.height = "500px"
+
+		document.getElementsByClassName('container')[0].appendChild(renderer.domElement)
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': bi_x_scale(+d.x)
+				'y': bi_y_scale(+d.y)
+				'z': bi_z_scale(+d.z)
+				'data': d
+				'source':
+					'x': bi_x_scale(+d.x)
+					'y': bi_y_scale(+d.y)
+					'z': bi_z_scale(+d.z)
+				'target':
+					'x': bi_y_scale(+d.y)
+					'y': bi_z_scale(+d.z)
+					'z': bi_x_scale(+d.x)
+			)
+		ease = d3.ease("cubic-in-out")
+
+		startTime = new Date().getTime()
+		loopTime = new Date
+		forward = true
+		lastDiff = 0
+		lastT = 0
+
+		# create particles
+		particle_geometry = new THREE.Geometry
+
+		# create a particle material
+		material = new THREE.PointCloudMaterial(
+			size: 2
+			color: 0x000000
+			map: THREE.ImageUtils.loadTexture('assets/img/circle_64.png')
+			transparent: false
+			blending: THREE.SubtractiveBlending
+		)
+
+		starModels.forEach (d) ->
+			particle_geometry.vertices.push(new THREE.Vector3(d.x, d.y, d.z))
+
+		pointcloud = new THREE.PointCloud(particle_geometry, material)
+		scene.add(pointcloud)
+
+		render = () ->
+			stats.begin()
+
+			pointcloud.rotation.y += 0.01
+
+			renderer.render(scene, camera)
+
+			stats.end()
+
+			requestAnimationFrame(render)
+
+		render()
+
 
 	animatePixi = () ->
-		renderer = PIXI.autoDetectRenderer(500, 500, {resolution: 1})
+		renderer = PIXI.autoDetectRenderer(500, 500, {resolution: 2})
 		document.getElementsByClassName('container')[0].appendChild(renderer.view)
 
 		stage = new PIXI.Stage(0xFFFFFF)
@@ -650,7 +1062,6 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		container = new PIXI.SpriteBatch
 		stage.addChild(container)
 
-
 		# create model
 		starModels = []
 		stars.forEach (d) ->
@@ -658,6 +1069,12 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 				'x': x_scale(+d.x)
 				'y': y_scale(+d.y)
 				'data': d
+				'source':
+					'x': x_scale(+d.x)
+					'y': y_scale(+d.y)
+				'target':
+					'x': y_scale(+d.y)
+					'y': z_scale(+d.z)
 			)
 		ease = d3.ease("cubic-in-out")
 
@@ -676,18 +1093,11 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		starModels.forEach (d) ->
 			d.g = new PIXI.Sprite.fromImage("assets/img/circle.png")
 
-			d.g.width = 4
-			d.g.height = 4
+			d.g.width = 2
+			d.g.height = 2
 
 			d.g.position.x = d.x
 			d.g.position.y = d.y
-
-			d.source =
-				x: d.x
-				y: d.y
-			d.target =
-				x: y_scale(+d.data.y)
-				y: z_scale(+d.data.z)
 
 			container.addChild(d.g)
 
@@ -735,9 +1145,14 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 	#animateSVG()
 	#animateCanvas()
+	#animateCanvasSprite()
+	#animateCanvasCanvasSprite()
 	#animateVirtualDOM()
 	#animateWebGL()
 	#animateThree()
-	animateThreeSprite()
+	#animateThreeSprite()
+	#animateThreeParticles()
+	#animateFullThreeD()
 	#animatePixi()
-	#animatePixiSprite()
+	animatePixiSprite()
+	#animateTwo()

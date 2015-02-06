@@ -23,7 +23,8 @@
     "bootstrap-sass": "~3.3.3",
     "pixi.js": "~2.2.5",
     "stats.js": "*",
-    "three.js": "*"
+    "three.js": "*",
+    "two.js": "~0.4.0"
   },
   "overrides": {
     "jquery": {
