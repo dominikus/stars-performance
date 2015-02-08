@@ -858,6 +858,11 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 		pointcloud = new THREE.PointCloud(particle_geometry, material)
 		scene.add(pointcloud)
 
+		timedChunk = (particles, positions, fn, context, callback) ->
+			i = 0
+			tick = () ->
+				start = new Date().getTime()
+
 		render = () ->
 			stats.begin()
 
@@ -876,13 +881,18 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 			mt = 1-t
 
 			i = 0
-			starModels.forEach (d) ->
+			start = new Date().getTime()
+			starModels.every (d) ->
 				# animate model
 				d.x = t*d.source.x + mt*d.target.x
 				d.y = t*d.source.y + mt*d.target.y
 
 				particle_geometry.vertices[i] = new THREE.Vector3(d.x, d.y, 1)
 				i++
+
+				return false if new Date().getTime() - start > 25
+				return true
+
 
 			particle_geometry.verticesNeedUpdate = true
 
@@ -896,6 +906,168 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 
 		render()
 
+	animateThreeShaders = () ->
+		scene = new THREE.Scene
+		camera = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 1000)
+		camera.position.z = 20
+		camera.lookAt(scene.position)
+
+		renderer = new THREE.WebGLRenderer
+
+		renderer.setClearColor 0xffffff, 0
+		renderer.setSize 1000,1000
+		renderer.domElement.style.width = "500px"
+		renderer.domElement.style.height = "500px"
+
+		document.getElementsByClassName('container')[0].appendChild(renderer.domElement)
+
+		# create model
+		starModels = []
+		stars.forEach (d) ->
+			starModels.push(
+				'x': bi_x_scale(+d.x)
+				'y': bi_y_scale(+d.y)
+				'z': bi_z_scale(+d.z)
+				'data': d
+				'source':
+					'x': bi_x_scale(+d.x)
+					'y': bi_y_scale(+d.y)
+				'target':
+					'x': bi_y_scale(+d.y)
+					'y': bi_z_scale(+d.z)
+			)
+		ease = d3.ease("cubic-in-out")
+
+		uniforms =
+			t:
+				type: "f"
+				value: 0.0
+			mt:
+				type: "f"
+				value: 1.0
+			tex:
+				type: "t"
+				value: THREE.ImageUtils.loadTexture("assets/img/circle_64.png")
+
+		attributes =
+			source:
+				type: "v3"
+				value: []
+			target:
+				type: "v3"
+				value: []
+			texCoords:
+				type: "v2"
+				value: []
+
+		geometry = new THREE.Geometry
+
+		vertexShader = """
+
+uniform float t;
+attribute vec3 source;
+attribute vec3 target;
+attribute vec2 aTextureCoord;
+
+varying vec2 vTextureCoord;
+
+void main(){
+	vec3 animatedPos = mix(source, target, t);
+
+	vec4 p = projectionMatrix * modelViewMatrix * vec4(animatedPos, 1.0);
+	gl_Position = p;
+
+	vTextureCoord = aTextureCoord;
+}
+
+		"""
+
+		fragmentShader = """
+varying vec2 vTextureCoord;
+uniform sampler2D tex;
+
+void main() {
+	gl_FragColor = vec4(0.0,0.0,0.0,1.0);	// paint it black
+	//gl_FragColor = texture2D(tex, vTextureCoord);
+}
+
+		"""
+
+		# create a particle material
+		material = new THREE.ShaderMaterial(
+			attributes: attributes
+			uniforms: uniforms
+			vertexShader: vertexShader
+			fragmentShader: fragmentShader
+			depthTest: false
+			wireFrame: true
+		)
+
+		offset = -2.5
+		offset2 = 2.5
+
+		i = 0
+		starModels.forEach (d) ->
+			geometry.vertices.push(
+				new THREE.Vector3(d.x+offset, d.y+offset, 0)
+				new THREE.Vector3(d.x+offset2, d.y+offset, 0)
+				new THREE.Vector3(d.x+offset2, d.y+offset2, 0)
+			)
+			geometry.faces.push(new THREE.Face3(i*3+0, i*3+1, i*3+2))
+
+			i++
+
+			attributes.source.value.push(
+				new THREE.Vector3(d.source.x + offset, d.source.y + offset, 0.0)
+				new THREE.Vector3(d.source.x + offset2, d.source.y + offset, 0.0)
+				new THREE.Vector3(d.source.x + offset2, d.source.y + offset2, 0.0)
+			)
+
+			attributes.target.value.push(
+				new THREE.Vector3(d.target.x + offset, d.target.y + offset, 0.0)
+				new THREE.Vector3(d.target.x + offset2, d.target.y + offset, 0.0)
+				new THREE.Vector3(d.target.x + offset2, d.target.y + offset2, 0.0)
+			)
+
+			attributes.texCoords.value.push(
+				new THREE.Vector2(0,0)
+				new THREE.Vector2(1,0)
+				new THREE.Vector2(1,1)
+			)
+
+		myMesh = new THREE.Mesh(geometry, material)
+		scene.add(myMesh)
+
+		startTime = new Date().getTime()
+		forward = true
+		lastDiff = 0
+
+		render = () ->
+			stats.begin()
+
+			# calculate time offset
+			currentTime = new Date().getTime()
+			diff = (currentTime - startTime) % animationDuration
+
+			# check if we're done
+			if diff < lastDiff
+				forward = !forward
+
+			if forward
+				t = ease(diff/animationDuration)
+			else
+				t = 1 - ease(diff/animationDuration)
+
+			uniforms.t.value = t
+
+			renderer.render(scene, camera)
+
+			lastDiff = diff
+
+			stats.end()
+			requestAnimationFrame(render)
+
+		render()
 
 	animateFullThreeD = () ->
 		scene = new THREE.Scene
@@ -1152,7 +1324,8 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 	#animateThree()
 	#animateThreeSprite()
 	#animateThreeParticles()
+	animateThreeShaders()
 	#animateFullThreeD()
 	#animatePixi()
-	animatePixiSprite()
+	#animatePixiSprite()
 	#animateTwo()
