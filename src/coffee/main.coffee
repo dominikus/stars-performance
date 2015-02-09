@@ -967,7 +967,7 @@ d3.csv "assets/data/hygdata_v3.csv", (stars) ->
 uniform float t;
 attribute vec3 source;
 attribute vec3 target;
-attribute vec2 aTextureCoord;
+attribute vec2 texCoords;
 
 varying vec2 vTextureCoord;
 
@@ -977,7 +977,7 @@ void main(){
 	vec4 p = projectionMatrix * modelViewMatrix * vec4(animatedPos, 1.0);
 	gl_Position = p;
 
-	vTextureCoord = aTextureCoord;
+	vTextureCoord = texCoords;
 }
 
 		"""
@@ -987,8 +987,8 @@ varying vec2 vTextureCoord;
 uniform sampler2D tex;
 
 void main() {
-	gl_FragColor = vec4(0.0,0.0,0.0,1.0);	// paint it black
-	//gl_FragColor = texture2D(tex, vTextureCoord);
+	//gl_FragColor = vec4(0.0,0.0,0.0,1.0);	// paint it black
+	gl_FragColor = texture2D(tex, vTextureCoord);
 }
 
 		"""
@@ -1012,8 +1012,10 @@ void main() {
 				new THREE.Vector3(d.x+offset, d.y+offset, 0)
 				new THREE.Vector3(d.x+offset2, d.y+offset, 0)
 				new THREE.Vector3(d.x+offset2, d.y+offset2, 0)
+				new THREE.Vector3(d.x+offset, d.y+offset2, 0)
 			)
-			geometry.faces.push(new THREE.Face3(i*3+0, i*3+1, i*3+2))
+			geometry.faces.push(new THREE.Face3(i*4+0, i*4+1, i*4+2))
+			geometry.faces.push(new THREE.Face3(i*4+0, i*4+2, i*4+3))
 
 			i++
 
@@ -1021,18 +1023,21 @@ void main() {
 				new THREE.Vector3(d.source.x + offset, d.source.y + offset, 0.0)
 				new THREE.Vector3(d.source.x + offset2, d.source.y + offset, 0.0)
 				new THREE.Vector3(d.source.x + offset2, d.source.y + offset2, 0.0)
+				new THREE.Vector3(d.source.x + offset, d.source.y + offset2, 0.0)
 			)
 
 			attributes.target.value.push(
 				new THREE.Vector3(d.target.x + offset, d.target.y + offset, 0.0)
 				new THREE.Vector3(d.target.x + offset2, d.target.y + offset, 0.0)
 				new THREE.Vector3(d.target.x + offset2, d.target.y + offset2, 0.0)
+				new THREE.Vector3(d.target.x + offset, d.target.y + offset2, 0.0)
 			)
 
 			attributes.texCoords.value.push(
 				new THREE.Vector2(0,0)
 				new THREE.Vector2(1,0)
 				new THREE.Vector2(1,1)
+				new THREE.Vector2(0,1)
 			)
 
 		myMesh = new THREE.Mesh(geometry, material)
